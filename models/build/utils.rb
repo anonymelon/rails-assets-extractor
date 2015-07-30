@@ -1,4 +1,5 @@
 require "open3"
+require './models/build/shell_error'
 
 module Build
   module Utils extend self
@@ -13,7 +14,7 @@ module Build
         command += " --config.storage.packages=#{tmp}/cache"
         command += " --config.interactive=false"
 
-        Rails.logger.info(command)
+        p (command)
 
         JSON.parse(Utils.sh(path, command))
       end
@@ -26,13 +27,13 @@ module Build
     def sh(cwd, *cmd)
       cmd = cmd.join(" ")
 
-      Rails.logger.debug "cd #{cwd} && #{cmd}"
+      p "cd #{cwd} && #{cmd}"
 
       output, error, status =
         Open3.capture3(cmd, :chdir => cwd)
 
-      Rails.logger.debug("#{cmd}\n#{output}") if output.present?
-      Rails.logger.warn("#{cmd}\n#{error}") if error.present? && !status.success?
+      p ("#{cmd}\n#{output}") if output.present?
+      p ("#{cmd}\n#{error}") if error.present? && !status.success?
 
       raise ShellError.new(error, cwd, cmd) unless status.success?
 

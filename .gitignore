@@ -1,0 +1,4 @@
+output/
+gem_output/
+gems/
+.DS_Store

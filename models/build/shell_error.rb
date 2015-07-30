@@ -1,3 +1,5 @@
+require './models/build/build_error'
+
 module Build
   class ShellError < BuildError
     attr_reader :path, :command

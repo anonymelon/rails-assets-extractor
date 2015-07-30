@@ -1,4 +1,9 @@
 require "rubygems/indexer"
+require "open3"
+require 'erb'
+require './models/build/bower_component'
+require './models/build/path'
+require './models/build/transformer'
 
 # +------+       +------+       +------+       +------+       +------+
 # |`.    |`.     |\     |\      |      |      /|     /|     .'|    .'|
@@ -10,6 +15,7 @@ require "rubygems/indexer"
 
 module Build
   module Converter extend self
+    RAKE_BIN = "rake"
     # Public: Performs full processing of given component
     #
     # name - component name to process
@@ -53,14 +59,15 @@ module Build
           components.map do |component|
             version = component.version_model
 
-            ::Rails.logger.info "Building #{component.name}##{version.string}..."
+            p "Building #{component.name}##{version.string}..."
 
             gem_filepath = Converter.convert!(component) do |output_dir, asset_paths, main_paths|
-              version.build_status = 'builded'
-              version.asset_paths = asset_paths.map(&:to_s)
-              version.main_paths = main_paths.map(&:to_s)
+              # version.build_status = 'builded'
+              # version.asset_paths = asset_paths.map(&:to_s)
+              # version.main_paths = main_paths.map(&:to_s)
               Converter.build!(component, output_dir, gems_dir)
             end
+            p gem_filepath, '************'
 
             [version, gem_filepath]
           end.compact
@@ -121,20 +128,38 @@ module Build
     #   For each component a Version and Component is created in database.
     def install!(component_name, component_version = nil)
       Dir.mktmpdir do |cache_dir|
+
         result = Utils.bower(
           cache_dir,
           'install -p -F',
           "#{component_name}##{component_version || "latest"}"
         )
-
+        p result
         bower_components =
           result.values.map do |data|
+            # cache_dir = '/Users/Jeremy/workspace/test/ui-grid-master'
+            p data, '*************'
             BowerComponent.new(Path.new(cache_dir), data)
           end
-
         yield bower_components
       end
     end
+
+    # def install!(component_name, component_version = nil)
+    #   cache_dir = '/Users/Jeremy/workspace/test/ui-grid-master'
+    #   result = Utils.bower(
+    #     cache_dir,
+    #     'install -p -F',
+    #     "ui-grid##{component_version || "latest"}"
+    #   )
+
+    #   bower_components =
+    #     result.values.map do |data|
+    #       BowerComponent.new(Path.new(cache_dir), data)
+    #     end
+
+    #   yield bower_components
+    # end
 
     # Internal: Converts given bower_component in cache_dir to gem in output_dir
     #
@@ -145,6 +170,7 @@ module Build
     #   output_dir is destroyed after yielded block finishes
     def convert!(bower_component)
       Dir.mktmpdir do |output_dir|
+        output_dir = './output'
         output_dir = Path.new(output_dir)
 
         transformations = Transformer.component_transformations(bower_component)
@@ -192,6 +218,28 @@ module Build
     #   * sets status of such gem to "failed" and sets build_message
     def index!(force = false)
       Reindex.new.perform(force)
+    end
+
+    def local_build(path)
+
+      cmd = "bower info #{path} --json"
+      output, error, status =
+          Open3.capture3(cmd, :chdir => path)
+      components = [BowerComponent.new(Path.new(path), JSON.parse(output))]
+      components.map do |component|
+        # version = component.version_model
+
+        p "Building #{component.name}..."
+
+        gem_filepath = Converter.convert!(component) do |output_dir, asset_paths, main_paths|
+          gems_dir = './gem_output/'
+
+          p component, '###############'
+          Converter.build!(component, output_dir, gems_dir)
+        end
+
+        ['version', gem_filepath]
+      end.compact
     end
 
     private

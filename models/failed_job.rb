@@ -1,3 +1,5 @@
+require 'active_record'
+
 class FailedJob < ActiveRecord::Base
   serialize :args, Array
 

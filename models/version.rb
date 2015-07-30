@@ -1,4 +1,6 @@
 require 'rubygems/version'
+require 'active_record'
+
 
 class Version < ActiveRecord::Base
   extend Build::Utils

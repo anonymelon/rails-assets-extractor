@@ -1,7 +1,9 @@
+require './models/build/utils'
+
 module Build
 
   class GemComponent < SimpleDelegator
-
+    GEM_PREFIX = "rails-assets-"
     alias_method :bower_component, :__getobj__
 
     def filename

@@ -1,3 +1,5 @@
+require 'active_record'
+
 class Component < ActiveRecord::Base
   validates :name, presence: true, uniqueness: true
 

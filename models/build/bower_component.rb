@@ -1,3 +1,6 @@
+require './models/build/gem_component'
+require './models/build/paths'
+
 module Build
   class BowerComponent
     attr_reader :cache_dir, :data
@@ -14,11 +17,11 @@ module Build
     end
 
     def name
-      data['endpoint']['name']
+      data['name'].split('/').last
     end
 
     def license
-      data['pkgMeta']['license']
+      data['latest']['license']
     end
 
     def user
@@ -30,8 +33,8 @@ module Build
     end
 
     def version
-      if data['pkgMeta']['version']
-        data['pkgMeta']['version']
+      if data['latest']['version']
+        data['latest']['version']
       else
         raise BuildError.new(
           "#{full_name} has no versions defined. " +
@@ -41,25 +44,25 @@ module Build
     end
 
     def description
-      data['pkgMeta']['description'] || ""
+      data['latest']['description'] || ""
     end
 
     def repository
-      data['pkgMeta']['_source']
+      data['latest']['_source']
     end
 
     def homepage
-      PostRank::URI.normalize(data['pkgMeta']['homepage']).to_s
+      PostRank::URI.normalize(data['latest']['homepage']).to_s
     rescue
       nil
     end
 
     def dependencies
-      data['pkgMeta']['dependencies'] || {}
+      data['latest']['dependencies'] || {}
     end
 
     def main
-      if mains = data['pkgMeta']['main']
+      if mains = data['latest']['main']
         if mains.kind_of?(Hash)
           mains.values.flatten.compact
         elsif mains.kind_of?(Array)
@@ -75,7 +78,8 @@ module Build
     end
 
     def full_name
-      source = data['endpoint']['source']
+      # source = data['endpoint']['source']
+      source = data['name'].split('/').last
       source = source.sub(/#.*$/, '')
       source = source.sub(/\.git$/, '')
 
